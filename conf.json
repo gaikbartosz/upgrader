@@ -1,0 +1,43 @@
+{
+  "NIGHTLY_BUILD": [
+    {
+      "DEBUG_PROJECT": "qb-arion7584a1-cubitvexp4-conax",
+      "SECURE_PROJECT": "qb-arion7584a1-secure-cubitvexp4-conax",
+      "WORK_DIR": "/home/bgaik/workspace/testSkrypt",
+      "BRANCH": "3800",
+      "GENERATE_USB_RECOVERY": true,
+      "DEBUG_LOGO_FILENAME": "d2ee1ee16de8927e832109efcebf1c20.bin",
+      "DEBUG_BOOTIMAGE_FILENAME": "65b8909a6a69ea121cd447d973716e0a.bin",
+      "SECURE_LOGO_FILENAME": "823d4c7ebc9d69024adae77bb2171937.bin",
+      "SECURE_BOOTIMAGE_FILENAME": "db853c9cbb42122305dc37e682c27cbe.bin",
+      "REMOTE_LOCATION": "/media/share/GENERIC_12/NightlyBuilds/",
+      "REMOVE_FILES_AFTER_DAYS": "7"
+    }
+  ],
+  "UPGRADE": {
+    "WORK_DIR": "/home/bgaik/workspace/testSkrypt",
+    "REMOTE_LOCATION": "/home/cubiware/public_html/sbuilds",
+    "SERVER": "greenlab",
+    "USERNAME": "cubiware",
+    "PASSWORD": "q1w2e3r4",
+    "UPGRADE_BASE_DIR": "/var/www/html/upgrade/auto_upgrade",
+    "UPGRADE_BASE_URL": "http://10.136.209.228/upgrade/auto_upgrade",
+    "TO_MAIL_ADDRESS": "cwgreeno365@tivo.com",
+    "FROM_MAIL_ADDRESS": "greenlab-jenkins@tivo.com",
+    "BOXES_LIST": [
+      {
+        "PROJECT": "qb-arion7584a1-cubitv-conax",
+        "BRANCH": 4522,
+        "IP": "10.136.213.154",
+        "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_generic"
+      }
+    ]
+  },
+  "JIRA": {
+    "SERVER_ADDRESS": "https://jira.cubiware.com:9443",
+    "USER": "coreautomator",
+    "PASSWORD": "wahch8Iewuce4aa6kee4",
+    "CHANGELOG_TAG": "CUBCI-1",
+    "PROJECT_TAG": "CUB12"
+  }
+}
