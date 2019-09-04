@@ -100,19 +100,7 @@ class Upgrader:
             subprocess.check_call(command, shell=True, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as error:
             print(error.output)
-            self.clean()
             exit(0)
-
-    def clean(self):
-        """
-        Remove files created during building project.
-        Source files are not removed, to prevent non-stop pulling files.
-        """
-
-        print("Cleaning ...")
-        #self.call_command("rm -rf {}".format(os.path.join(self.build_dir, "sbuild-*")))
-        #self.call_command("rm -rf {}".format(os.path.join(self.build_dir, "__temp")))
-        print("Cleaning done.")
 
     def prepare(self):
         """Prepare directories, files"""
@@ -158,7 +146,7 @@ class Upgrader:
 
         print("Tagging new software ...")
         self.call_command('nosilo tag {} --name=bluelab_{}'.format(self.branch,
-                                                                   version_md5_hash))
+                                                                   self.version_md5_hash))
 
     def copy(self):
         """Copy prepared packages to remote and local locations"""
@@ -213,8 +201,15 @@ class Upgrader:
         
         print(message)
 
+        msg=textwrap.dedent('''\
+        From: {}
+        To: {}
+        Subject: {}
+        {}
+        '''.format(self.from_mail_address, self.to_mail_address, subject, message))
+
         server = SMTP('gmail-smtp-in.l.google.com:25')
-        server.sendmail(from_addr=self.from_mail_address, to_addrs=self.to_mail_address, msg=message)
+        server.sendmail(from_addr=self.from_mail_address, to_addrs=self.to_mail_address, msg=msg)
         server.quit()
 
     def upgrade_box(self, box:dict):
@@ -236,15 +231,17 @@ class Upgrader:
             self.upgrade_box(box)
 
 def helper():
-    scriptName = os.path.basename(__file__)
+    epilog=textwrap.dedent('''\
+    Example of usage:
+    ./{scriptName} -h
+    ./{scriptName} --type all
+    ./{scriptName} --type single --ip 10.136.2015.153 --project qb-arion7584a1-cubitvexp4-conax --branch 3800 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic'''
+    .format(scriptName=os.path.basename(__file__)))
+
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='Script is used to upgrade boxes in lab.',
-                                     epilog=textwrap.dedent('''\
-                                     Example of usage:
-                                     ./{} -h
-                                     ./{} --type all
-                                     ./{} --type single --ip 10.136.2015.153 --project qb-arion7584a1-cubitvexp4-conax --branch 3800 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic'''
-                                     .format(scriptName, scriptName, scriptName)))
+                                     epilog=epilog)
+
     parser.add_argument('--type', type=str, help='upgrade type: single box with params or all boxes located in conf.json')
     parser.add_argument('--ip', type=str)
     parser.add_argument('--project', type=str)
