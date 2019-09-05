@@ -24,8 +24,6 @@
 
 """
 Script which builds projects and copies them to remote location.
-Remote location must be mounted in operating system,
-so it is possible to easy copy/remove files.
 """
 
 import json
@@ -37,28 +35,11 @@ import argparse
 import textwrap
 import pysftp
 import time
+from typing import List, Dict
 from smtplib import SMTP
 
 class Upgrader:
     """Class which is response for building projects based on config from conf.json."""
-
-    sw_tag:str
-    build_dir:str
-    remote_location: str
-    work_dir: str
-    server: str
-    username: str
-    lab_key_path: str
-    all_boxes: list
-    upgrade_base_dir: str
-    upgrade_base_url: str
-    key_path: str
-    project: str
-    branch: str
-    ip: str
-    upgrade_succeed: bool
-    from_mail_address: str
-    to_mail_address: str
 
     def __init__(self, upgrade_config:dict):
         """Constructor of Upgrader class.
@@ -68,25 +49,25 @@ class Upgrader:
         """
 
         """Config params"""
-        self.remote_location = upgrade_config['REMOTE_LOCATION']
-        self.work_dir = upgrade_config['WORK_DIR']
-        self.server = upgrade_config['SERVER']
-        self.username = upgrade_config['USERNAME']
-        self.lab_key_path = upgrade_config['LAB_KEY_PATH']
-        self.all_boxes = upgrade_config['BOXES_LIST']
-        self.upgrade_base_dir = upgrade_config['UPGRADE_BASE_DIR']
-        self.upgrade_base_url = upgrade_config['UPGRADE_BASE_URL']
-        self.from_mail_address = upgrade_config['FROM_MAIL_ADDRESS']
-        self.to_mail_address = upgrade_config['TO_MAIL_ADDRESS']
+        self.remote_location: int = upgrade_config['REMOTE_LOCATION']
+        self.work_dir: str = upgrade_config['WORK_DIR']
+        self.server: str = upgrade_config['SERVER']
+        self.username: str = upgrade_config['USERNAME']
+        self.lab_key_path: str = upgrade_config['LAB_KEY_PATH']
+        self.all_boxes: List[Dict[str, str]]= upgrade_config['BOXES_LIST']
+        self.upgrade_base_dir: str = upgrade_config['UPGRADE_BASE_DIR']
+        self.upgrade_base_url: str = upgrade_config['UPGRADE_BASE_URL']
+        self.from_mail_address: str = upgrade_config['FROM_MAIL_ADDRESS']
+        self.to_mail_address: str = upgrade_config['TO_MAIL_ADDRESS']
 
         """Present upgrade params"""
-        self.version_md5_hash = None
-        self.build_dir = None
-        self.project = None
-        self.branch = None
-        self.ip = None
-        self.key_path = None
-        self.upgrade_succeed = None
+        self.version_md5_hash: str = None
+        self.build_dir: str = None
+        self.project: str = None
+        self.branch: str = None
+        self.ip: str = None
+        self.key_path: str = None
+        self.upgrade_succeed: bool = None
 
     def call_command(self, command: str):
         """
@@ -181,7 +162,6 @@ class Upgrader:
         print('Upgrade STB with package {}\n'.format(upgradeUrl))
         client.connect(self.ip, username='admin', key_filename=self.key_path)
         client.exec_command('upgrade --with-gui --upgrade-server {}'.format(upgradeUrl), timeout=60)
-        time.sleep(60)
 
         print('Wait for upgrade and reboot')
         time.sleep(60)
@@ -218,7 +198,7 @@ class Upgrader:
         server.sendmail(from_addr=self.from_mail_address, to_addrs=self.to_mail_address, msg=msg)
         server.quit()
 
-    def upgrade_box(self, box:dict):
+    def upgrade_box(self, box: Dict[str, str]):
         self.project = box['PROJECT']
         self.branch = box['BRANCH']
         self.ip = box['IP']

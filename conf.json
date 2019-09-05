@@ -26,14 +26,20 @@
     "FROM_MAIL_ADDRESS": "greenlab-jenkins@tivo.com",
     "BOXES_LIST": [
       {
+        "PROJECT": "millicom-kaon7581b0-cubitv-viewrightdvb",
+        "BRANCH": "4583",
+        "IP": "10.136.215.223",
+        "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_dta"
+      },
+      {
         "PROJECT": "qb-arion7584a1-cubitv-conax",
-        "BRANCH": 4522,
+        "BRANCH": "4522",
         "IP": "10.136.213.154",
         "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_generic"
       },
       {
         "PROJECT": "qb-arion7584a1-cubitv-conax",
-        "BRANCH": 4522,
+        "BRANCH": "4522",
         "IP": "10.136.214.246",
         "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_generic"
       }
