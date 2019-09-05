@@ -30,6 +30,12 @@
         "BRANCH": 4522,
         "IP": "10.136.213.154",
         "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_generic"
+      },
+      {
+        "PROJECT": "qb-arion7584a1-cubitv-conax",
+        "BRANCH": 4522,
+        "IP": "10.136.214.246",
+        "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_generic"
       }
     ]
   },

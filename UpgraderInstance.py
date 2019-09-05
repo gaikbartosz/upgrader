@@ -154,7 +154,7 @@ class Upgrader:
         remotePath = os.path.join(self.remote_location, self.version_md5_hash, 'sbuild-{}'.format(self.project))
         localPath = os.path.join(self.work_dir, self.branch, 'sbuild-{}'.format(self.project))
         
-        print("Copy {} to remote {}".format(remotePath.split('/')[-1], remotePath))
+        print("Copy {} to remote {}\n".format(remotePath.split('/')[-1], remotePath))
         with pysftp.Connection(self.server, username=self.username, password=self.password) as sftp:
             sftp.makedirs(remotePath)
             sftp.put_d(localPath, remotePath)
@@ -163,7 +163,7 @@ class Upgrader:
         packagePath = os.path.join(localPath, '{}-upgrade-CURRENT.tgz'.format(self.project))
         upgradePath = os.path.join(self.upgrade_base_dir, self.project)
 
-        print("Extract {} to local {}".format(packagePath.split('/')[-1], upgradePath))
+        print("Extract {} to local {}\n".format(packagePath.split('/')[-1], upgradePath))
         self.call_command('mkdir -p {}'.format(upgradePath))
         self.call_command('tar -xf {} -C {}'.format(packagePath, upgradePath))
 
@@ -175,15 +175,19 @@ class Upgrader:
         known_host_path = os.path.join('~', '.ssh', 'known_hosts')
         client.load_host_keys(os.path.expanduser(known_host_path))
 
-        print("Upgrade STB with package {}".format(os.path.join(self.upgrade_base_url, self.project)))
+        upgradeUrl = os.path.join(self.upgrade_base_url, self.project)
+        print('Upgrade STB with package {}\n'.format(upgradeUrl))
         client.connect(self.ip, username='admin', key_filename=self.key_path)
-        client.exec_command('upgrade --with-gui --upgrade-server {}'.format(os.path.join(self.upgrade_base_url, self.project)), timeout=60)
+        client.exec_command('upgrade --with-gui --upgrade-server {}'.format(upgradeUrl), timeout=60)
+        time.sleep(60)
+
+        print('Wait for upgrade and reboot')
+        time.sleep(60)
         client.exec_command('/sbin/reboot')
         client.close()
 
+        print('Wait for activation and check upgrade status')
         time.sleep(60)
-
-        print("Check upgrade")
         client.connect(self.ip, username='admin', key_filename=self.key_path)
         stdin, stdout, stderr = client.exec_command("/usr/local/bin/setnv | grep SV_VERSION | cut -d'=' -f2")
         self.upgrade_succeed = True if stdout.readlines()[0].rstrip() == self.version_md5_hash else False
