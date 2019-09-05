@@ -48,7 +48,7 @@ class Upgrader:
     work_dir: str
     server: str
     username: str
-    password: str
+    lab_key_path: str
     all_boxes: list
     upgrade_base_dir: str
     upgrade_base_url: str
@@ -72,7 +72,7 @@ class Upgrader:
         self.work_dir = upgrade_config['WORK_DIR']
         self.server = upgrade_config['SERVER']
         self.username = upgrade_config['USERNAME']
-        self.password = upgrade_config['PASSWORD']
+        self.lab_key_path = upgrade_config['LAB_KEY_PATH']
         self.all_boxes = upgrade_config['BOXES_LIST']
         self.upgrade_base_dir = upgrade_config['UPGRADE_BASE_DIR']
         self.upgrade_base_url = upgrade_config['UPGRADE_BASE_URL']
@@ -155,10 +155,12 @@ class Upgrader:
         localPath = os.path.join(self.work_dir, self.branch, 'sbuild-{}'.format(self.project))
         
         print("Copy {} to remote {}\n".format(remotePath.split('/')[-1], remotePath))
-        with pysftp.Connection(self.server, username=self.username, password=self.password) as sftp:
-            sftp.makedirs(remotePath)
-            sftp.put_d(localPath, remotePath)
-            sftp.execute('chmod -R 777 {}'.format(os.path.join(self.remote_location, self.version_md5_hash)))
+        with pysftp.Connection(self.server, username=self.username, private_key=self.lab_key_path) as sftp:
+            if not sftp.exists(remotePath):
+                sftp.makedirs(remotePath)
+                sftp.put_d(localPath, remotePath)
+                sftp.execute('chmod -R 777 {}'.format(os.path.join(self.remote_location, self.version_md5_hash)))
+            sftp.close()
 
         packagePath = os.path.join(localPath, '{}-upgrade-CURRENT.tgz'.format(self.project))
         upgradePath = os.path.join(self.upgrade_base_dir, self.project)
@@ -197,19 +199,19 @@ class Upgrader:
         """Send email with confirmations"""
 
         if (self.upgrade_succeed):
-            message="Software {} (branch: {}) was installed succesfully on STB: {}!\nSoftware hash: {}".format(self.project, self.branch, self.ip, self.version_md5_hash)
+            message='Software {} from branch: {} was installed succesfully on STB: {}! Software hash: {}.'.format(self.project, self.branch, self.ip, self.version_md5_hash)
             subject="Automatic software upgrade SUCCEED"
         else:
-            message="Software {} (branch: {}) was not installed successfully on STB: {}!\nCurrently installed version is different to expected: {}".format(self.project, self.branch, self.ip, self.version_md5_hash)
+            message='Software {} from branch: {} was not installed successfully on STB: {}! Currently installed version is different to expected: {}.'.format(self.project, self.branch, self.ip, self.version_md5_hash)
             subject="Automatic software upgrade FAILED"
-        
+
         print(message)
 
         msg=textwrap.dedent('''\
         From: {}
         To: {}
         Subject: {}
-        {}
+        {}\
         '''.format(self.from_mail_address, self.to_mail_address, subject, message))
 
         server = SMTP('gmail-smtp-in.l.google.com:25')
