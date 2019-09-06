@@ -37,6 +37,8 @@ import pysftp
 import time
 from typing import List, Dict
 from smtplib import SMTP
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 class Upgrader:
     """Class which is response for building projects based on config from conf.json."""
@@ -178,6 +180,8 @@ class Upgrader:
     def notify(self):
         """Send email with confirmations"""
 
+        msg = MIMEMultipart()
+
         if (self.upgrade_succeed):
             message='Software {} from branch: {} was installed succesfully on STB: {}! Software hash: {}.'.format(self.project, self.branch, self.ip, self.version_md5_hash)
             subject="Automatic software upgrade SUCCEED"
@@ -185,18 +189,18 @@ class Upgrader:
             message='Software {} from branch: {} was not installed successfully on STB: {}! Currently installed version is different to expected: {}.'.format(self.project, self.branch, self.ip, self.version_md5_hash)
             subject="Automatic software upgrade FAILED"
 
-        print(message)
+        msg = MIMEMultipart()
 
-        msg=textwrap.dedent('''\
-        From: {}
-        To: {}
-        Subject: {}
-        {}\
-        '''.format(self.from_mail_address, self.to_mail_address, subject, message))
+        msg['From'] = self.from_mail_address
+        msg['To'] = self.to_mail_address
+        msg['Subject'] = subject
+        msg.attach(MIMEText(message, 'plain'))
 
         server = SMTP('gmail-smtp-in.l.google.com:25')
-        server.sendmail(from_addr=self.from_mail_address, to_addrs=self.to_mail_address, msg=msg)
+        server.sendmail(from_addr=self.from_mail_address, to_addrs=self.to_mail_address, msg=msg.as_string())
         server.quit()
+
+        print(message)
 
     def upgrade_box(self, box: Dict[str, str]):
         self.project = box['PROJECT']
