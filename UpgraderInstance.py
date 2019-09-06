@@ -23,7 +23,7 @@
 #
 
 """
-Script which builds projects and copies them to remote location.
+Script which builds projects, copies them to remote location, upgrades boxes and sends status email.
 """
 
 import json
@@ -61,6 +61,7 @@ class Upgrader:
         self.upgrade_base_url: str = upgrade_config['UPGRADE_BASE_URL']
         self.from_mail_address: str = upgrade_config['FROM_MAIL_ADDRESS']
         self.to_mail_address: str = upgrade_config['TO_MAIL_ADDRESS']
+        self.hostname: str = upgrade_config['HOSTNAME']
 
         """Present upgrade params"""
         self.version_md5_hash: str = None
@@ -196,7 +197,9 @@ class Upgrader:
         msg['Subject'] = subject
         msg.attach(MIMEText(message, 'plain'))
 
-        server = SMTP('gmail-smtp-in.l.google.com:25')
+        server = SMTP(self.hostname)
+        server.starttls()
+        server.login('', '')
         server.sendmail(from_addr=self.from_mail_address, to_addrs=self.to_mail_address, msg=msg.as_string())
         server.quit()
 
