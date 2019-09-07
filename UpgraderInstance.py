@@ -30,23 +30,19 @@ import json
 import os
 import glob
 import subprocess
-import datetime
 import argparse
 import textwrap
 import pysftp
 import time
+import threading
 from typing import List, Dict
 from smtplib import SMTP
 
-class Upgrader:
-    """Class which is response for building projects based on config from conf.json."""
+class upgradeThread(threading.Thread):
 
-    def __init__(self, upgrade_config:dict):
-        """Constructor of Upgrader class.
+    def __init__(self, upgrade_config, branch, project, ip, key_path):
 
-        Args:
-        upgrade_config (dict): Data taken from conf.json containing specific upgrade data.
-        """
+        super().__init__(self)
 
         """Config params"""
         self.remote_location: int = upgrade_config['REMOTE_LOCATION']
@@ -54,20 +50,17 @@ class Upgrader:
         self.server: str = upgrade_config['SERVER']
         self.username: str = upgrade_config['USERNAME']
         self.lab_key_path: str = upgrade_config['LAB_KEY_PATH']
-        self.all_boxes: List[Dict[str, str]]= upgrade_config['BOXES_LIST']
+        self.all_boxes: List[Dict[str, str]] = upgrade_config['BOXES_LIST']
         self.upgrade_base_dir: str = upgrade_config['UPGRADE_BASE_DIR']
         self.upgrade_base_url: str = upgrade_config['UPGRADE_BASE_URL']
         self.from_mail_address: str = upgrade_config['FROM_MAIL_ADDRESS']
         self.to_mail_address: str = upgrade_config['TO_MAIL_ADDRESS']
 
-        """Present upgrade params"""
-        self.version_md5_hash: str = None
-        self.build_dir: str = None
-        self.project: str = None
-        self.branch: str = None
-        self.ip: str = None
-        self.key_path: str = None
-        self.upgrade_succeed: bool = None
+        """Upgrade params unique for thread"""
+        self.branch = branch
+        self.project = project
+        self.ip = ip
+        self.lab_key_path = key_path
 
     def call_command(self, command: str):
         """
@@ -83,6 +76,7 @@ class Upgrader:
             print(error.output)
             exit(0)
 
+
     def prepare(self):
         """Prepare directories, files"""
 
@@ -96,6 +90,7 @@ class Upgrader:
         self.call_command('nosilo pull {} -ym'.format(self.branch))
         print("Pulling done.")
 
+
     def build(self):
         """
         Build single project. Software will be tagged by tag prepared in prepare() method.
@@ -103,7 +98,7 @@ class Upgrader:
 
         print("Build project {}".format(self.project))
         self.call_command('SvDebug=yes SvDebugBuild=yes SvKeepStack=yes \
-                           pysilo --project {}'.format(self.project))
+                               pysilo --project {}'.format(self.project))
         print("Build done.")
 
         upgrade_package = glob.glob(os.path.join("sbuild-{}".format(self.project), "*upgrade*.tgz"))[0]
@@ -129,12 +124,13 @@ class Upgrader:
         self.call_command('nosilo tag {} --name=bluelab_{}'.format(self.branch,
                                                                    self.version_md5_hash))
 
+
     def copy(self):
         """Copy prepared packages to remote and local locations"""
 
         remotePath = os.path.join(self.remote_location, self.version_md5_hash, 'sbuild-{}'.format(self.project))
         localPath = os.path.join(self.work_dir, self.branch, 'sbuild-{}'.format(self.project))
-        
+
         print("Copy {} to remote {}\n".format(remotePath.split('/')[-1], remotePath))
         with pysftp.Connection(self.server, username=self.username, private_key=self.lab_key_path) as sftp:
             if not sftp.exists(remotePath):
@@ -150,7 +146,7 @@ class Upgrader:
         self.call_command('mkdir -p {}'.format(upgradePath))
         self.call_command('tar -xf {} -C {}'.format(packagePath, upgradePath))
 
-    
+
     def upgrade(self):
         """Upgrade STB"""
 
@@ -175,43 +171,56 @@ class Upgrader:
         self.upgrade_succeed = True if stdout.readlines()[0].rstrip() == self.version_md5_hash else False
         client.close()
 
+
     def notify(self):
         """Send email with confirmations"""
 
         if (self.upgrade_succeed):
-            message='Software {} from branch: {} was installed succesfully on STB: {}! Software hash: {}.'.format(self.project, self.branch, self.ip, self.version_md5_hash)
-            subject="Automatic software upgrade SUCCEED"
+            message = 'Software {} from branch: {} was installed succesfully on STB: {}! Software hash: {}.'.format(
+                self.project, self.branch, self.ip, self.version_md5_hash)
+            subject = "Automatic software upgrade SUCCEED"
         else:
-            message='Software {} from branch: {} was not installed successfully on STB: {}! Currently installed version is different to expected: {}.'.format(self.project, self.branch, self.ip, self.version_md5_hash)
-            subject="Automatic software upgrade FAILED"
+            message = 'Software {} from branch: {} was not installed successfully on STB: {}! Currently installed version is different to expected: {}.'.format(
+                self.project, self.branch, self.ip, self.version_md5_hash)
+            subject = "Automatic software upgrade FAILED"
 
         print(message)
 
-        msg=textwrap.dedent('''\
-        From: {}
-        To: {}
-        Subject: {}
-        {}\
-        '''.format(self.from_mail_address, self.to_mail_address, subject, message))
+        msg = textwrap.dedent('''\
+            From: {}
+            To: {}
+            Subject: {}
+            {}\
+            '''.format(self.from_mail_address, self.to_mail_address, subject, message))
 
         server = SMTP('gmail-smtp-in.l.google.com:25')
         server.sendmail(from_addr=self.from_mail_address, to_addrs=self.to_mail_address, msg=msg)
         server.quit()
 
-    def upgrade_box(self, box: Dict[str, str]):
-        self.project = box['PROJECT']
-        self.branch = box['BRANCH']
-        self.ip = box['IP']
-        self.key_path = box['KEY_PATH']
 
+    def run(self):
         print("Upgrade STB {} with project {} from {}".format(self.ip, self.project, self.branch))
-    
         self.prepare()
         self.build()
         self.copy()
         self.upgrade()
         self.notify()
 
+class Upgrader():
+    """Class which is response for building projects based on config from conf.json."""
+
+    def __init__(self, upgrade_config:dict):
+        """Constructor of Upgrader class.
+
+        Args:
+        upgrade_config (dict): Data taken from conf.json containing specific upgrade data.
+        """
+        self.upgrade_config: Dict['str', 'str'] = upgrade_config
+
+    def upgrade_box(self, box: Dict[str, str]):
+        thread = upgradeThread(self.upgrade_config, box['BRANCH'], box['PROJECT'], box['IP'], box['KEY_PATH'])
+        thread.start()
+    
     def upgrade_all_boxes(self):
         for box in self.all_boxes:
             self.upgrade_box(box)

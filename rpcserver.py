@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import sys
 import UpgraderInstance
 import nightly_build
 from asyncrpc.server import UniCastServer
