@@ -63,6 +63,7 @@ class Upgrader:
         self.to_mail_address: str = upgrade_config['TO_MAIL_ADDRESS']
 
         """Present upgrade params"""
+        self.upgrade_type: str = 'single'
         self.version_md5_hash: str = None
         self.build_dir: str = None
         self.project: str = None
@@ -70,6 +71,7 @@ class Upgrader:
         self.ip: str = None
         self.key_path: str = None
         self.upgrade_succeed: bool = None
+        self.sbuild_path: str = None
 
     def call_command(self, command: str):
         """
@@ -88,15 +90,20 @@ class Upgrader:
     def prepare(self):
         """Prepare directories, files"""
 
-        print("Preparing working directories ...")
-        build_dir = os.path.join(self.work_dir, self.branch)
-        os.makedirs(build_dir, exist_ok=True)
-        os.chdir(build_dir)
-        print("Done")
-
-        print("Pulling branch {} to {} ...".format(self.branch, build_dir))
-        self.call_command('nosilo pull {} -ym'.format(self.branch))
-        print("Pulling done.")
+        if self.upgrade_type == 'single' or self.upgrade_type == 'all':
+            print("Preparing working directories ...")
+            build_dir = os.path.join(self.work_dir, self.branch)
+            os.makedirs(build_dir, exist_ok=True)
+            os.chdir(build_dir)
+            print("Done")
+            
+            print("Pulling branch {} to {} ...".format(self.branch, build_dir))
+            self.call_command('nosilo pull {} -ym'.format(self.branch))
+            print("Pulling done.")
+        elif self.upgrade_type == 'local':
+            print("Change directory to local path {}".format(self.sbuild_path))
+            os.chdir(self.sbuild_path)
+            print("Done")
 
     def build(self):
         """
@@ -203,14 +210,17 @@ class Upgrader:
 
         print(message)
 
-    def upgrade_box(self, box: Dict[str, str]):
-        self.project = box['PROJECT']
-        self.branch = box['BRANCH']
-        self.ip = box['IP']
-        self.key_path = box['KEY_PATH']
+    def upgrade_box(self, upgrade_params: Dict[str, str]):
+        self.project = upgrade_params['PROJECT']
+        self.branch = upgrade_params['BRANCH']
+        self.ip = upgrade_params['IP']
+        self.key_path = upgrade_params['KEY_PATH']
+        self.sbuild_path = upgrade_params['BRANCH_PATH']
 
-        print("Upgrade STB {} with project {} from {}".format(self.ip, self.project, self.branch))
-    
+        print('Upgrade params:')
+        for k, v in upgrade_params.items():
+            if k and v: print('{} = {}'.format(k, v))
+
         self.prepare()
         self.build()
         self.copy()
@@ -218,26 +228,33 @@ class Upgrader:
         self.notify()
 
     def upgrade_all_boxes(self):
+        self.upgrade_type = 'all'
         for box in self.all_boxes:
             self.upgrade_box(box)
+    
+    def upgrade_box_with_local_sbuild(self, upgrade_params: Dict[str, str]):
+        self.upgrade_type = 'local'
+        self.upgrade_box(upgrade_params)
 
 def helper():
     epilog=textwrap.dedent('''\
     Example of usage:
     ./{scriptName} -h
     ./{scriptName} --type all
-    ./{scriptName} --type single --ip 10.136.2015.153 --project qb-arion7584a1-cubitvexp4-conax --branch 3800 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic'''
+    ./{scriptName} --type single --ip 10.136.2015.153 --project qb-arion7584a1-cubitvexp4-conax --branch 3800 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic
+    ./{scriptName} --type local --ip 10.136.2015.153 --project millicom-kaon7581b0-cubitv-viewrightdvb --branch 4583 --path /home/bgaik/Branch/4583-4.0/ --key /home/bgaik/.ssh/stbkeys/id_rsa_generic'''
     .format(scriptName=os.path.basename(__file__)))
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='Script is used to upgrade boxes in lab.',
                                      epilog=epilog)
 
-    parser.add_argument('--type', type=str, help='upgrade type: single box with params or all boxes located in conf.json')
+    parser.add_argument('--type', type=str, help='upgrade type: single box with params, all boxes located in conf.json, local sbuild')
     parser.add_argument('--ip', type=str)
     parser.add_argument('--project', type=str)
     parser.add_argument('--branch', type=str)
     parser.add_argument('--key', type=str)
+    parser.add_argument('--path', type=str)
     return parser.parse_args()
 
 def main():
@@ -257,9 +274,13 @@ def main():
         upgrader = Upgrader(upgradeData)
         upgrader.upgrade_all_boxes()
     elif args.type == 'single' and args.ip and args.project and args.branch and args.key:
-        box = {'PROJECT': args.project, 'BRANCH': args.branch, 'IP': args.ip, 'KEY_PATH': args.key}
         upgrader = Upgrader(upgradeData)
-        upgrader.upgrade_box(box)
+        upgrade_params = {'PROJECT': args.project, 'BRANCH_PATH': '', 'BRANCH': args.branch, 'IP': args.ip, 'KEY_PATH': args.key}
+        upgrader.upgrade_box(upgrade_params)
+    elif args.type == 'local' and args.ip and args.project and args.path and args.key:
+        upgrader = Upgrader(upgradeData)
+        upgrade_params = {'PROJECT': args.project, 'BRANCH_PATH': args.path, 'BRANCH': args.branch, 'IP': args.ip, 'KEY_PATH': args.key}
+        upgrader.upgrade_box_with_local_sbuild(upgrade_params)
 
 if __name__ == "__main__":
     main()
