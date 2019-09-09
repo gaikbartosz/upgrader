@@ -61,7 +61,6 @@ class Upgrader:
         self.upgrade_base_url: str = upgrade_config['UPGRADE_BASE_URL']
         self.from_mail_address: str = upgrade_config['FROM_MAIL_ADDRESS']
         self.to_mail_address: str = upgrade_config['TO_MAIL_ADDRESS']
-        self.hostname: str = upgrade_config['HOSTNAME']
 
         """Present upgrade params"""
         self.version_md5_hash: str = None
@@ -164,15 +163,15 @@ class Upgrader:
         upgradeUrl = os.path.join(self.upgrade_base_url, self.project)
         print('Upgrade STB with package {}\n'.format(upgradeUrl))
         client.connect(self.ip, username='admin', key_filename=self.key_path)
-        client.exec_command('upgrade --with-gui --upgrade-server {}'.format(upgradeUrl), timeout=60)
+        client.exec_command('upgrade --with-gui --upgrade-server {}'.format(upgradeUrl))
 
         print('Wait for upgrade and reboot')
-        time.sleep(60)
+        time.sleep(120)
         client.exec_command('/sbin/reboot')
         client.close()
 
         print('Wait for activation and check upgrade status')
-        time.sleep(60)
+        time.sleep(120)
         client.connect(self.ip, username='admin', key_filename=self.key_path)
         stdin, stdout, stderr = client.exec_command("/usr/local/bin/setnv | grep SV_VERSION | cut -d'=' -f2")
         self.upgrade_succeed = True if stdout.readlines()[0].rstrip() == self.version_md5_hash else False
@@ -197,9 +196,8 @@ class Upgrader:
         msg['Subject'] = subject
         msg.attach(MIMEText(message, 'plain'))
 
-        server = SMTP(self.hostname)
-        server.starttls()
-        server.login('', '')
+        server = SMTP()
+        server.connect()
         server.sendmail(from_addr=self.from_mail_address, to_addrs=self.to_mail_address, msg=msg.as_string())
         server.quit()
 
