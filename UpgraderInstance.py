@@ -91,24 +91,35 @@ class Upgrader:
         """Prepare directories, files"""
 
         if self.upgrade_type == 'single' or self.upgrade_type == 'all':
-            print("Preparing working directories ...")
             build_dir = os.path.join(self.work_dir, self.branch)
+            #
+            print("Preparing working directories in {}".format(build_dir))
             os.makedirs(build_dir, exist_ok=True)
             os.chdir(build_dir)
             print("Done")
             
-            print("Pulling branch {} to {} ...".format(self.branch, build_dir))
+            print("Pulling branch {} ...".format(self.branch))
             self.call_command('nosilo pull {} -ym'.format(self.branch))
             print("Pulling done.")
         elif self.upgrade_type == 'local':
-            print("Change directory to local path {}".format(self.sbuild_path))
-            os.chdir(self.sbuild_path)
+            print("Change work_dir to local path {}".format(self.sbuild_path))
+            self.work_dir = self.sbuild_path
+            os.chdir(self.work_dir)
             print("Done")
+        elif self.upgrade_type == 'rc':
+            build_dir = os.path.join(self.work_dir, 'RC')
+            print("Preparing working directories in {}".format(build_dir))
+            os.makedirs(build_dir, exist_ok=True)
+            os.chdir(build_dir)
+            print("Done")
+            
+            print("Pulling RC {} ...".format(self.project))
+            self.call_command('nosilo fetch release {}'.format(self.project))
+            print("Pulling done.")
+
 
     def build(self):
-        """
-        Build single project. Software will be tagged by tag prepared in prepare() method.
-        """
+        """Build single project. Software will be tagged by tag prepared in prepare() method."""
 
         print("Build project {}".format(self.project))
         self.call_command('SvDebug=yes SvDebugBuild=yes SvKeepStack=yes \
@@ -141,21 +152,28 @@ class Upgrader:
     def copy(self):
         """Copy prepared packages to remote and local locations"""
 
-        remotePath = os.path.join(self.remote_location, self.version_md5_hash, 'sbuild-{}'.format(self.project))
-        localPath = os.path.join(self.work_dir, self.branch, 'sbuild-{}'.format(self.project))
-        
-        print("Copy {} to remote {}\n".format(remotePath.split('/')[-1], remotePath))
+        localBasePath = os.path.join(self.work_dir, self.branch)
+        localPath = os.path.join(localBasePath, 'sbuild-{}'.format(self.project))
+        archName = 'sbuild.tar'
+        print("Create {} from {}\n".format(archName, localPath.split('/')[-1]))
+        localArchPath = os.path.join(localBasePath, archName)
+        self.call_command('cd {}'.format(localBasePath))
+        self.call_command('tar -zcf {} {}'.format(archName, localPath.split('/')[-1]))
+
+        remoteBasePath = os.path.join(self.remote_location, self.version_md5_hash)
+        print("Extract {} in remote {}\n".format(archName, remoteBasePath))
         with pysftp.Connection(self.server, username=self.username, private_key=self.lab_key_path) as sftp:
-            if not sftp.exists(remotePath):
-                sftp.makedirs(remotePath)
-                sftp.put_d(localPath, remotePath)
-                sftp.execute('chmod -R 777 {}'.format(os.path.join(self.remote_location, self.version_md5_hash)))
+            sftp.makedirs(remoteBasePath)
+            remoteArchPath = os.path.join(remoteBasePath, archName)
+            sftp.put(localArchPath, remoteArchPath)
+            sftp.execute('cd {path} && tar -xf {arch} && rm {arch}'.format(path=remoteBasePath, arch=archName))
+            sftp.execute('chmod -R 777 {}'.format(remoteBasePath))
             sftp.close()
 
         packagePath = os.path.join(localPath, '{}-upgrade-CURRENT.tgz'.format(self.project))
         upgradePath = os.path.join(self.upgrade_base_dir, self.project)
 
-        print("Extract {} to local {}\n".format(packagePath.split('/')[-1], upgradePath))
+        print("Extract {} in local {}\n".format(packagePath.split('/')[-1], upgradePath))
         self.call_command('mkdir -p {}'.format(upgradePath))
         self.call_command('tar -xf {} -C {}'.format(packagePath, upgradePath))
 
@@ -174,7 +192,7 @@ class Upgrader:
 
         print('Wait for upgrade and reboot')
         time.sleep(120)
-        client.exec_command('/sbin/reboot')
+        client.exec_command('reboot')
         client.close()
 
         print('Wait for activation and check upgrade status')
@@ -215,11 +233,13 @@ class Upgrader:
         self.branch = upgrade_params['BRANCH']
         self.ip = upgrade_params['IP']
         self.key_path = upgrade_params['KEY_PATH']
-        self.sbuild_path = upgrade_params['BRANCH_PATH']
+        #self.sbuild_path = upgrade_params['BRANCH_PATH']
 
+        print('#'*60)
         print('Upgrade params:')
         for k, v in upgrade_params.items():
             if k and v: print('{} = {}'.format(k, v))
+        print('#'*60)
 
         self.prepare()
         self.build()
@@ -231,9 +251,13 @@ class Upgrader:
         self.upgrade_type = 'all'
         for box in self.all_boxes:
             self.upgrade_box(box)
-    
+
     def upgrade_box_with_local_sbuild(self, upgrade_params: Dict[str, str]):
         self.upgrade_type = 'local'
+        self.upgrade_box(upgrade_params)
+
+    def upgrade_box_with_rc(self, upgrade_params: Dict[str, str]):
+        self.upgrade_type = 'rc'
         self.upgrade_box(upgrade_params)
 
 def helper():
@@ -242,14 +266,15 @@ def helper():
     ./{scriptName} -h
     ./{scriptName} --type all
     ./{scriptName} --type single --ip 10.136.2015.153 --project qb-arion7584a1-cubitvexp4-conax --branch 3800 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic
-    ./{scriptName} --type local --ip 10.136.2015.153 --project millicom-kaon7581b0-cubitv-viewrightdvb --branch 4583 --path /home/bgaik/Branch/4583-4.0/ --key /home/bgaik/.ssh/stbkeys/id_rsa_generic'''
+    ./{scriptName} --type local --ip 10.136.2015.153 --project millicom-kaon7581b0-cubitv-viewrightdvb --branch 4583 --path /home/bgaik/Branch/4583-4.0/ --key /home/bgaik/.ssh/stbkeys/id_rsa_generic
+    ./{scriptName} --type rc --ip 10.136.2015.153 --project millicom-kaon7581b0-cubitv-viewrightdvb-4.0rc2 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic'''
     .format(scriptName=os.path.basename(__file__)))
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='Script is used to upgrade boxes in lab.',
                                      epilog=epilog)
 
-    parser.add_argument('--type', type=str, help='upgrade type: single box with params, all boxes located in conf.json, local sbuild')
+    parser.add_argument('--type', type=str, help=r"'single' box with params, 'all' boxes located in conf.json, 'local' sbuild or 'rc'")
     parser.add_argument('--ip', type=str)
     parser.add_argument('--project', type=str)
     parser.add_argument('--branch', type=str)
@@ -281,6 +306,12 @@ def main():
         upgrader = Upgrader(upgradeData)
         upgrade_params = {'PROJECT': args.project, 'BRANCH_PATH': args.path, 'BRANCH': args.branch, 'IP': args.ip, 'KEY_PATH': args.key}
         upgrader.upgrade_box_with_local_sbuild(upgrade_params)
+    elif args.type == 'rc' and args.ip and args.project and args.key:
+        upgrader = Upgrader(upgradeData)
+        upgrade_params = {'PROJECT': args.project, 'BRANCH_PATH': '', 'BRANCH': '', 'IP': args.ip, 'KEY_PATH': args.key}
+        upgrader.upgrade_box_with_local_sbuild(upgrade_params)
+    else:
+        assert(False)
 
 if __name__ == "__main__":
     main()

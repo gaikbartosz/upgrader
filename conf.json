@@ -22,7 +22,7 @@
     "LAB_KEY_PATH": "/home/bgaik/.ssh/id_rsa_greenlab",
     "UPGRADE_BASE_DIR": "/var/www/html/upgrade/auto_upgrade",
     "UPGRADE_BASE_URL": "http://10.136.209.228/upgrade/auto_upgrade",
-    "TO_MAIL_ADDRESS": "cwgreeno365@tivo.com",
+    "TO_MAIL_ADDRESS": "bartosz.gaik@tivo.com",
     "FROM_MAIL_ADDRESS": "greenlab-jenkins@tivo.com",
     "BOXES_LIST": [
       {
