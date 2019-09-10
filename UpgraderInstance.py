@@ -72,6 +72,7 @@ class Upgrader:
         self.key_path: str = None
         self.upgrade_succeed: bool = None
         self.sbuild_path: str = None
+        self.base_dir: str = None
 
     def call_command(self, command: str):
         """
@@ -91,26 +92,25 @@ class Upgrader:
         """Prepare directories, files"""
 
         if self.upgrade_type == 'single' or self.upgrade_type == 'all':
-            build_dir = os.path.join(self.work_dir, self.branch)
-            #
-            print("Preparing working directories in {}".format(build_dir))
-            os.makedirs(build_dir, exist_ok=True)
-            os.chdir(build_dir)
+            self.base_dir = os.path.join(self.work_dir, self.branch)
+            print("Preparing working directories in {}".format(self.base_dir))
+            os.makedirs(self.base_dir, exist_ok=True)
+            os.chdir(self.base_dir)
             print("Done")
             
             print("Pulling branch {} ...".format(self.branch))
             self.call_command('nosilo pull {} -ym'.format(self.branch))
             print("Pulling done.")
         elif self.upgrade_type == 'local':
-            print("Change work_dir to local path {}".format(self.sbuild_path))
-            self.work_dir = self.sbuild_path
-            os.chdir(self.work_dir)
+            self.base_dir = self.sbuild_path
+            print("Change work_dir to local path {}".format(self.base_dir))
+            os.chdir(self.base_dir)
             print("Done")
         elif self.upgrade_type == 'rc':
-            build_dir = os.path.join(self.work_dir, 'RC')
-            print("Preparing working directories in {}".format(build_dir))
-            os.makedirs(build_dir, exist_ok=True)
-            os.chdir(build_dir)
+            self.base_dir = os.path.join(self.work_dir, 'RC')
+            print("Preparing working directories in {}".format(self.base_dir))
+            os.makedirs(self.base_dir, exist_ok=True)
+            os.chdir(self.base_dir)
             print("Done")
             
             print("Pulling RC {} ...".format(self.project))
@@ -152,12 +152,11 @@ class Upgrader:
     def copy(self):
         """Copy prepared packages to remote and local locations"""
 
-        localBasePath = os.path.join(self.work_dir, self.branch)
-        localPath = os.path.join(localBasePath, 'sbuild-{}'.format(self.project))
+        localPath = os.path.join(self.base_dir, 'sbuild-{}'.format(self.project))
         archName = 'sbuild.tar'
         print("Create {} from {}\n".format(archName, localPath.split('/')[-1]))
-        localArchPath = os.path.join(localBasePath, archName)
-        self.call_command('cd {}'.format(localBasePath))
+        localArchPath = os.path.join(self.base_dir, archName)
+        self.call_command('cd {}'.format(self.base_dir))
         self.call_command('tar -zcf {} {}'.format(archName, localPath.split('/')[-1]))
 
         remoteBasePath = os.path.join(self.remote_location, self.version_md5_hash)
@@ -233,7 +232,7 @@ class Upgrader:
         self.branch = upgrade_params['BRANCH']
         self.ip = upgrade_params['IP']
         self.key_path = upgrade_params['KEY_PATH']
-        #self.sbuild_path = upgrade_params['BRANCH_PATH']
+        self.sbuild_path = upgrade_params['BRANCH_PATH']
 
         print('#'*60)
         print('Upgrade params:')
