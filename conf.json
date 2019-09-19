@@ -24,24 +24,26 @@
     "UPGRADE_BASE_URL": "http://10.136.209.228/upgrade/auto_upgrade",
     "TO_MAIL_ADDRESS": "bartosz.gaik@tivo.com",
     "FROM_MAIL_ADDRESS": "greenlab-jenkins@tivo.com",
+    "PROJECT_TO_KEYS_PATH":
+    {
+      "DTA": "/home/bgaik/.ssh/stbkeys/id_rsa_dta",
+      "GENERIC": "/home/bgaik/.ssh/stbkeys/id_rsa_generic"
+    },
     "BOXES_LIST": [
       {
         "PROJECT": "millicom-kaon7581b0-cubitv-viewrightdvb",
         "BRANCH": "4583",
-        "IP": "10.136.215.223",
-        "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_dta"
+        "IP": "10.136.215.223"
       },
       {
         "PROJECT": "qb-arion7584a1-cubitv-conax",
         "BRANCH": "4522",
-        "IP": "10.136.213.154",
-        "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_generic"
+        "IP": "10.136.213.154"
       },
       {
         "PROJECT": "qb-arion7584a1-cubitv-conax",
         "BRANCH": "4522",
-        "IP": "10.136.214.246",
-        "KEY_PATH": "/home/bgaik/.ssh/stbkeys/id_rsa_generic"
+        "IP": "10.136.214.246"
       }
     ]
   },

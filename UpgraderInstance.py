@@ -71,7 +71,6 @@ class Upgrader:
         self.ip: str = None
         self.key_path: str = None
         self.upgrade_succeed: bool = None
-        self.sbuild_path: str = None
         self.base_dir: str = None
 
     def call_command(self, command: str):
@@ -101,11 +100,6 @@ class Upgrader:
             print("Pulling branch {} ...".format(self.branch))
             self.call_command('nosilo pull {} -ym'.format(self.branch))
             print("Pulling done.")
-        elif self.upgrade_type == 'local':
-            self.base_dir = self.sbuild_path
-            print("Change work_dir to local path {}".format(self.base_dir))
-            os.chdir(self.base_dir)
-            print("Done")
         elif self.upgrade_type == 'rc':
             self.base_dir = os.path.join(self.work_dir, 'RC')
             print("Preparing working directories in {}".format(self.base_dir))
@@ -121,10 +115,10 @@ class Upgrader:
     def build(self):
         """Build single project. Software will be tagged by tag prepared in prepare() method."""
 
-        print("Build project {}".format(self.project))
-        self.call_command('SvDebug=yes SvDebugBuild=yes SvKeepStack=yes \
-                           pysilo --project {}'.format(self.project))
-        print("Build done.")
+        if not self.upgrade_type == 'rc':
+            print("Build project {}".format(self.project))
+            self.call_command('SvDebug=yes SvDebugBuild=yes SvKeepStack=yes pysilo --clean --project {}'.format(self.project))
+            print("Build done.")
 
         upgrade_package = glob.glob(os.path.join("sbuild-{}".format(self.project), "*upgrade*.tgz"))[0]
         assert len(upgrade_package) > 0
@@ -152,6 +146,9 @@ class Upgrader:
     def copy(self):
         """Copy prepared packages to remote and local locations"""
 
+        if self.upgrade_type == 'rc':
+            return
+
         localPath = os.path.join(self.base_dir, 'sbuild-{}'.format(self.project))
         archName = 'sbuild.tar'
         print("Create {} from {}\n".format(archName, localPath.split('/')[-1]))
@@ -160,13 +157,15 @@ class Upgrader:
         self.call_command('tar -zcf {} {}'.format(archName, localPath.split('/')[-1]))
 
         remoteBasePath = os.path.join(self.remote_location, self.version_md5_hash)
+        remoteSbuildPath = os.path.join(remoteBasePath, 'sbuild-{}'.format(self.project))
         print("Extract {} in remote {}\n".format(archName, remoteBasePath))
         with pysftp.Connection(self.server, username=self.username, private_key=self.lab_key_path) as sftp:
-            sftp.makedirs(remoteBasePath)
-            remoteArchPath = os.path.join(remoteBasePath, archName)
-            sftp.put(localArchPath, remoteArchPath)
-            sftp.execute('cd {path} && tar -xf {arch} && rm {arch}'.format(path=remoteBasePath, arch=archName))
-            sftp.execute('chmod -R 777 {}'.format(remoteBasePath))
+            if not sftp.exists(remoteSbuildPath):
+                sftp.makedirs(remoteBasePath)
+                remoteArchPath = os.path.join(remoteBasePath, archName)
+                sftp.put(localArchPath, remoteArchPath)
+                sftp.execute('cd {path} && tar -xf {arch} && rm {arch}'.format(path=remoteBasePath, arch=archName))
+                sftp.execute('chmod -R 777 {}'.format(remoteBasePath))
             sftp.close()
 
         packagePath = os.path.join(localPath, '{}-upgrade-CURRENT.tgz'.format(self.project))
@@ -231,8 +230,16 @@ class Upgrader:
         self.project = upgrade_params['PROJECT']
         self.branch = upgrade_params['BRANCH']
         self.ip = upgrade_params['IP']
-        self.key_path = upgrade_params['KEY_PATH']
-        self.sbuild_path = upgrade_params['BRANCH_PATH']
+        #self.key_path = upgrade_params['KEY_PATH']
+
+        '''
+        temporary hack, should be fix soon
+        map project name to path
+        '''
+        if 'millicom' in self.project:
+            self.key_path = '/home/bgaik/.ssh/stbkeys/id_rsa_dta'
+        else:
+            self.key_path = '/home/bgaik/.ssh/stbkeys/id_rsa_generic'
 
         print('#'*60)
         print('Upgrade params:')

@@ -23,9 +23,15 @@ class RPCServer:
 
     @asyncio.coroutine
     def upgradeBox(self, project:str, branch:int, ip:str):
-        externalBox = {'PROJECT': project, 'BRANCH': branch, 'IP': ip}
+        upgrade_params = {'PROJECT': project, 'BRANCH': branch, 'IP': ip}
         upgrader = Upgrader(self.upgrade)
-        upgrader.upgrade_box(externalBox)
+        upgrader.upgrade_box(upgradeParams)
+
+    @asyncio.coroutine
+    def upgradeBoxWithRC(self, project:str, ip:str):
+        upgrade_params = {'PROJECT': project, 'IP': ip}
+        upgrader = Upgrader(self.upgrade)
+        upgrader.upgrade_box_with_rc(upgradeParams)
 
     @asyncio.coroutine
     def buildNightlySoft(self):
