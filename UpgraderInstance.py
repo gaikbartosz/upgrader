@@ -288,8 +288,8 @@ class Upgrader:
         .format(scriptName=os.path.basename(__file__)))
 
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                        description='Script is used to upgrade boxes in lab.',
-                                        epilog=epilog)
+                                         description='Script is used to upgrade boxes in lab.',
+                                         epilog=epilog)
 
         parser.add_argument('--type', type=str, help=r"'single' box with params, 'all' boxes located in conf.json, 'local' sbuild or 'rc'")
         parser.add_argument('--ip', type=str)
@@ -312,15 +312,13 @@ def main():
         data = json.load(f)
 
     upgradeData = data['UPGRADE']
+    upgrader = Upgrader(upgradeData)
     if args.type == 'all':
-        upgrader = Upgrader(upgradeData)
         upgrader.upgrade_all_boxes()
     elif args.type == 'single' and args.ip and args.project and args.branch and args.key:
-        upgrader = Upgrader(upgradeData)
         upgrade_params = {'PROJECT': args.project, 'BRANCH_PATH': '', 'BRANCH': args.branch, 'IP': args.ip, 'KEY_PATH': args.key}
         upgrader.upgrade_box(upgrade_params)
     elif args.type == 'rc' and args.ip and args.project and args.key:
-        upgrader = Upgrader(upgradeData)
         upgrade_params = {'PROJECT': args.project, 'BRANCH_PATH': '', 'BRANCH': '', 'IP': args.ip, 'KEY_PATH': args.key}
         upgrader.upgrade_box_with_local_sbuild(upgrade_params)
     else:

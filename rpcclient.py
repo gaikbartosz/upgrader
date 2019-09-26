@@ -3,11 +3,12 @@
 import asyncio
 import os, sys
 import json
+import textwrap
 from asyncrpc.client import UniCastClient
 from contextlib import suppress
 import argparse
 
-class RPCClient():
+class RPCClient:
 
     def __init__(self):
         config_file = 'rpcclient.json'
@@ -17,39 +18,32 @@ class RPCClient():
             self.upgrade_host = data['UPGRADE_HOST']
             self.server_port = data['PORT']
 
-    def getJenkinsVariable(self, name):
-        val = os.getenv(name)
-        if val:
-            val.endswith(",")
-            val = val[:-1]
-        return val
-
     def doUpgrade(self):
         print("Starting upgrade job ...")
         self.server = UniCastClient(interfaces_info=[(self.upgrade_host, self.server_port)])
-        mode = self.getJenkinsVariable("Mode")
+        mode = RPCClient.getJenkinsVariable("Mode")
         if not mode:
             mode = "All"
 
         loop = asyncio.get_event_loop()
         loop.set_debug(1)
         if mode == "Singl":
-            boxIP = self.getJenkinsVariable("BoxIP")
-            project = self.getJenkinsVariable("Project")
+            boxIP = RPCClient.getJenkinsVariable("BoxIP")
+            project = RPCClient.getJenkinsVariable("Project")
             if boxIP is "" or project is "":
                 raise Exception("Please type BoxIP/Project")
                 sys.exit()
 
-            isRelease = self.getJenkinsVariable("Release")
+            isRelease = RPCClient.getJenkinsVariable("Release")
             if isRelease == "true":
-                releaseVersion = self.getJenkinsVariable("ReleaseVersion")
+                releaseVersion = RPCClient.getJenkinsVariable("ReleaseVersion")
                 if releaseVersion is "":
                     raise Exception("Please type ReleaseVersion for RELEASE upgrade")
                     sys.exit()
 
-            isRelease = self.getJenkinsVariable("Release")
+            isRelease = RPCClient.getJenkinsVariable("Release")
             if isRelease == "true":
-                releaseVersion = self.getJenkinsVariable("ReleaseVersion")
+                releaseVersion = RPCClient.getJenkinsVariable("ReleaseVersion")
                 if releaseVersion is "":
                     raise Exception("Please type ReleaseVersion for RELEASE upgrade")
                     sys.exit()
@@ -58,7 +52,7 @@ class RPCClient():
                     print(loop.run_until_complete(self.server.upgradeBoxWithRC(boxIP, "{}-{}".format(project, releaseVersion))))
 
             else:
-                branch = self.getJenkinsVariable("Branch")
+                branch = RPCClient.getJenkinsVariable("Branch")
                 if branch is "" :
                     raise Exception("Please type Branch for CURRENT upgrade")
                     sys.exit()
@@ -83,24 +77,33 @@ class RPCClient():
                 pass
         loop.run_until_complete(self.server.close())
 
-def helper():
-    epilog=textwrap.dedent('''\
-    Example of usage:
-    ./{scriptName} -h
-    ./{scriptName} --type nightly
-    ./{scriptName} --type upgrade'''
-    .format(scriptName=os.path.basename(__file__)))
+    @staticmethod
+    def getJenkinsVariable(name):
+        val = os.getenv(name)
+        if val:
+            val.endswith(",")
+            val = val[:-1]
+        return val
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description='Client rpc is use to connect to server rpc and do upgrade or nightly build.',
-                                     epilog=epilog)
+    @staticmethod
+    def helper():
+        epilog=textwrap.dedent('''\
+        Example of usage:
+        ./{scriptName} --help
+        ./{scriptName} --type nightly
+        ./{scriptName} --type upgrade'''
+        .format(scriptName=os.path.basename(__file__)))
 
-    parser.add_argument('--type', type=str)
-    return parser.parse_args()
+        parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+                                         description='Client rpc is use to connect to server rpc and do upgrade or nightly build.',
+                                         epilog=epilog)
+
+        parser.add_argument('--type', type=str)
+        return parser.parse_args()
 
 def main():
 
-    args = helper()
+    args = RPCClient.helper()
 
     rpcClient = RPCClient()
     if args.type == 'upgrade':
