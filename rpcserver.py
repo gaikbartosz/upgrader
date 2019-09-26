@@ -2,8 +2,8 @@
 
 import asyncio
 import json
-import UpgraderInstance
-import nightly_build
+from nightly_build import Builder
+from UpgraderInstance import Upgrader
 from asyncrpc.server import UniCastServer
 
 class RPCServer:
@@ -25,13 +25,13 @@ class RPCServer:
     def upgradeBox(self, project:str, branch:int, ip:str):
         upgrade_params = {'PROJECT': project, 'BRANCH': branch, 'IP': ip}
         upgrader = Upgrader(self.upgrade)
-        upgrader.upgrade_box(upgradeParams)
+        upgrader.upgrade_box(upgrade_params)
 
     @asyncio.coroutine
     def upgradeBoxWithRC(self, project:str, ip:str):
         upgrade_params = {'PROJECT': project, 'IP': ip}
         upgrader = Upgrader(self.upgrade)
-        upgrader.upgrade_box_with_rc(upgradeParams)
+        upgrader.upgrade_box_with_rc(upgrade_params)
 
     @asyncio.coroutine
     def buildNightlySoft(self):
@@ -42,7 +42,7 @@ class RPCServer:
 if __name__ == '__main__':
     server = UniCastServer(
         obj=RPCServer(),
-        ip_addrs='10.136.208.248',
+        ip_addrs='10.136.209.228',
         port=9001
     )
 
