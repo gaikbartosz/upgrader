@@ -57,15 +57,3 @@ class JiraInstance:
             print("Add fixed version to {}".format(task))
             issue = self.jira.issue(task, fields='fixVersions')
             issue.add_field_value('fixVersions', {'name': fixed_version})
-
-        '''
-        for task in self.tasks:
-            print("Add fixed version to {}".format(task))
-            fixVersions = []
-            issue = self.jira.issue(task)
-            for version in issue.fields.fixVersions:
-                if version.name != fixVersions:
-                    fixVersions.append({'name': version.name})
-            fixVersions.append({'name': fixed_version})
-            issue.update(fields={'fixVersions': fixVersions})
-        '''

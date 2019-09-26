@@ -11,7 +11,7 @@ import argparse
 class RPCClient:
 
     def __init__(self):
-        config_file = 'rpcclient.json'
+        config_file = os.path.expanduser(os.path.join('~', 'rpcclient.json'))
         with open(config_file) as f:
             data = json.load(f)
             self.nightly_build_host = data['NIGHTLY_BUILD_HOST']
