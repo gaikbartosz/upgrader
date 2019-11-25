@@ -112,6 +112,8 @@ class Upgrader:
             print("Pulling RC {} ...".format(self.project))
             self.call_command('nosilo fetch release {}'.format(self.project))
             print("Pulling done.")
+        elif self.upgrade_type == 'local':
+            pass
 
 
     def build(self):
@@ -186,7 +188,7 @@ class Upgrader:
 
         upgradeUrl = os.path.join(self.upgrade_base_url, self.project)
         print('Upgrade STB with package {}\n'.format(upgradeUrl))
-        client.connect(self.ip, username='admin', key_filename=self.key_path)
+        client.connect(self.ip, username='admin', key_filename=self.key_path, timeout=10)
 
         time.sleep(5)
         client.exec_command('upgrade --with-gui --upgrade-server {}'.format(upgradeUrl))
@@ -246,9 +248,12 @@ class Upgrader:
         temporary hack, should be fix soon
         map project name to path
         '''
-        if 'millicom' in self.project:
+
+        if 'millicom_prod' in self.project:
+            self.key_path = '/home/bgaik/.ssh/stbkeys/id_rsa_millicom'
+        elif 'millicom' in self.project:
             self.key_path = '/home/bgaik/.ssh/stbkeys/id_rsa_dta'
-        else:
+        elif 'qb' in self.project:
             self.key_path = '/home/bgaik/.ssh/stbkeys/id_rsa_generic'
 
         print('#'*60)
@@ -273,10 +278,6 @@ class Upgrader:
         self.upgrade_type = 'local'
         self.upgrade_box(upgrade_params)
 
-    def upgrade_box_with_rc(self, upgrade_params: Dict[str, str]):
-        self.upgrade_type = 'rc'
-        self.upgrade_box(upgrade_params)
-
     @staticmethod
     def helper():
         epilog=textwrap.dedent('''\
@@ -284,7 +285,8 @@ class Upgrader:
         ./{scriptName} -h
         ./{scriptName} --type all
         ./{scriptName} --type single --ip 10.136.2015.153 --project qb-arion7584a1-cubitvexp4-conax --branch 3800 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic
-        ./{scriptName} --type rc --ip 10.136.2015.153 --project millicom-kaon7581b0-cubitv-viewrightdvb-4.0rc2 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic'''
+        ./{scriptName} --type rc --ip 10.136.2015.153 --project millicom-kaon7581b0-cubitv-viewrightdvb-4.0rc2 --key /home/bgaik/.ssh/stbkeys/id_rsa_generic
+        ./{scriptName} --type local --ip 10.136.2015.153 --sbuild qb-arion7584a1-cubitvexp4-conax --key /home/bgaik/.ssh/stbkeys/id_rsa_generic'''
         .format(scriptName=os.path.basename(__file__)))
 
         parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -297,6 +299,7 @@ class Upgrader:
         parser.add_argument('--branch', type=str)
         parser.add_argument('--key', type=str)
         parser.add_argument('--path', type=str)
+        parser.add_argument('--sbuild', type=str)
         return parser.parse_args()
 
 def main():
@@ -318,7 +321,7 @@ def main():
     elif args.type == 'single' and args.ip and args.project and args.branch and args.key:
         upgrade_params = {'PROJECT': args.project, 'BRANCH_PATH': '', 'BRANCH': args.branch, 'IP': args.ip, 'KEY_PATH': args.key}
         upgrader.upgrade_box(upgrade_params)
-    elif args.type == 'rc' and args.ip and args.project and args.key:
+    elif args.type == 'sbuild' and args.ip and args.sbuild and args.key:
         upgrade_params = {'PROJECT': args.project, 'BRANCH_PATH': '', 'BRANCH': '', 'IP': args.ip, 'KEY_PATH': args.key}
         upgrader.upgrade_box_with_local_sbuild(upgrade_params)
     else:

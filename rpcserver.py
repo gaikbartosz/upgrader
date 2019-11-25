@@ -1,5 +1,7 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3
 
+import os
+import sys
 import asyncio
 import json
 from nightly_build import Builder
@@ -9,7 +11,8 @@ from asyncrpc.server import UniCastServer
 class RPCServer:
 
     def __init__(self):
-        config_file = 'conf.json'
+        prefix = os.path.dirname(os.path.realpath(sys.argv[0]))
+        config_file = os.path.join(prefix, 'conf.json')
         with open(config_file) as f:
             data = json.load(f)
             self.nightlyBuilds = data['NIGHTLY_BUILD']
@@ -40,6 +43,7 @@ class RPCServer:
             builder.build_nightly_projects()
 
 if __name__ == '__main__':
+    print('Run rpc server')
     server = UniCastServer(
         obj=RPCServer(),
         ip_addrs='10.136.209.228',
