@@ -115,7 +115,6 @@ class Upgrader:
         elif self.upgrade_type == 'local':
             pass
 
-
     def build(self):
         """Build single project. Software will be tagged by tag prepared in prepare() method."""
 
@@ -178,6 +177,7 @@ class Upgrader:
         print("Extract {} in local {}\n".format(packagePath.split('/')[-1], upgradePath))
         self.call_command('mkdir -p {}'.format(upgradePath))
         self.call_command('tar -xf {} -C {}'.format(packagePath, upgradePath))
+
 
     def upgrade(self):
         """Upgrade STB"""
