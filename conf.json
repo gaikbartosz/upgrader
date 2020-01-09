@@ -26,18 +26,8 @@
     "FROM_MAIL_ADDRESS": "greenlab-jenkins@tivo.com",
     "BOXES_LIST": [
       {
-        "PROJECT": "millicom-kaon7581b0-cubitv-viewrightdvb",
-        "BRANCH": "4583",
-        "IP": "10.136.215.223"
-      },
-      {
         "PROJECT": "qb-arion7584a1-cubitvexp4-conax",
-        "BRANCH": "3800",
-        "IP": "10.136.213.154"
-      },
-      {
-        "PROJECT": "qb-arion7584a1-cubitvexp4-conax",
-        "BRANCH": "3800",
+        "BRANCH": "4627",
         "IP": "10.136.214.246"
       }
     ]
